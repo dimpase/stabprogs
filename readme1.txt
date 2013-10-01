@@ -21,6 +21,12 @@
     e-mail: Luitpold Babel  <luitpold.babel@unibw.de>
     e-mail: Dmitrii Pasechnik <dimpase@gmail.com>                          */
 
+NB!!! c2.wl is an example of 0-1 basis for a commutative unital algebra
+of dimension 10 which is not c.c. - it's not closed under transposition.
+None of the 3 versions on the program compute stabilization correctly.
+
+TO BE FIXED!!! (note added 2013-10-01)
+
 (this file is outdated!)
 PROGRAM IMPLEMENTATIONS OF THE WEISFEILER-LEMAN ALGORITHM
 
