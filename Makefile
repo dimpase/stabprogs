@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3
+CFLAGS=-Os
 
 all: stabil1 stabil2 stabcol
 
