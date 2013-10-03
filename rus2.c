@@ -23,7 +23,7 @@
 
 #include <stdlib.h>
 #include  <stdio.h>
-#define maxvert 200
+#define maxvert 2000
 #define maxrank maxvert*maxvert
 #define memlength 3*maxrank
 #define mlong int  /* to fix an MSDOS artefact */
@@ -33,6 +33,8 @@ struct triple
 struct edge
 { int row; int col; struct edge *ptr;};
 
+static struct edge *space;
+static struct triple **lines;
 
 int find_value( int *values, int len, int v) {
     int i;
@@ -44,52 +46,59 @@ int find_value( int *values, int len, int v) {
     return i;
 }
 
-int standardize(int graph[maxvert][maxvert], int ord) {
-    int values[maxvert*maxvert];
-    int dvalues[maxvert];
+int standardize(int *graph, int ord) {
     int nv,nd;
     int i,j,k;
+    int *values, *dvalues;
  
+    values=malloc(ord*ord*sizeof(int));
+    dvalues=malloc(ord*sizeof(int));
     nv=0;
     nd=0;
 
     for(i=0;i<ord;i++) {
-        k=find_value(dvalues,nd,graph[i][i]);
-        if(k==nd)dvalues[nd++]=graph[i][i];
+        k=find_value(dvalues,nd,graph[i*ord+i]);
+        if(k==nd)dvalues[nd++]=graph[i*ord+i];
     }
 
     for(i=0;i<ord;i++) for(j=0;j<ord;j++) {
         if(i==j) {
-            k=find_value(dvalues,nd,graph[i][j]);
-            graph[i][j]=k;
+            k=find_value(dvalues,nd,graph[i*ord+j]);
+            graph[i*ord+j]=k;
         } else {
-            k=find_value(values,nv,graph[i][j]);
-            if(k==nv)values[nv++]=graph[i][j];
-            graph[i][j]=k+nd;
+            k=find_value(values,nv,graph[i*ord+j]);
+            if(k==nv)values[nv++]=graph[i*ord+j];
+            graph[i*ord+j]=k+nd;
         }
     }
+    free(dvalues);
+    free(values);
     return nv+nd;
 }
 
-int antisymmetrize(int graph[maxvert][maxvert], int ord) {
+int antisymmetrize(int *graph, int ord) {
     int i,j;
     for(i=0;i<ord;i++) for(j=0;j<ord;j++) if(i!=j) {
-        graph[i][j]=graph[i][j]+65536*(graph[j][i]&0xffff);
+        graph[i*ord+j]=graph[i*ord+j]+65536*(graph[j*ord+i]&0xffff);
     }
     return 0;
 }
 
 int main(int narg, char *arg[10])
 {
-struct edge *color[maxrank];
+struct edge **color;
 int i,j,rank,vert;
-int graph[maxvert][maxvert];
+int *graph;
 long time; float t;
 long start_time,end_time;
 f=fopen(arg[1],"r");        /* char */
 if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
 fscanf (f,"%d%d",&rank,&vert);
-for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i][j]);
+graph=malloc(vert*vert*sizeof(int));
+lines=malloc(vert*vert*sizeof(struct triple *));
+color=malloc(vert*vert*sizeof(struct edge *));
+space=malloc(vert*vert*sizeof(struct edge));
+for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
 antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
 i=edgepack (graph,rank,vert,color); 
@@ -103,13 +112,13 @@ end_time=clock()/1000-start_time;
 printf("\b\b\b\b\b\b%6d",rank);
 for(i=0; i<rank; i++) color[i]->row=-1; j=0;
 for(i=0; i<vert; ++i) {
- if(color[graph[i][i]]->row<0) color[graph[i][i]]->row=j++;};
+ if(color[graph[i*vert+i]]->row<0) color[graph[i*vert+i]]->row=j++;};
 printf ("\n\n number of cells: %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
 printf("\n\n adjacency matrix of the cellular algebra:\n\n");
  for(i=0; i<vert; ++i) { 
      for(j=0; j<vert; ++j) { 
-       printf("%4d ",graph[i][j]);
+       printf("%4d ",graph[i*vert+j]);
      };
      printf("\n");
  };
@@ -117,35 +126,34 @@ printf("\n\n adjacency matrix of the cellular algebra:\n\n");
 }
 
 int edgepack (graph,rank,vert,color) 
-int graph[maxvert][maxvert], vert, rank;
-struct edge *color[maxrank];
+int *graph, vert, rank;
+struct edge **color;
 {
 int k,i,j;
-static struct edge space[maxrank];
 struct edge *free;
 
  for(i=0; i<vert; ++i) for(j=0; j<vert; ++j) {
-  if(graph[i][j]<0 || graph[i][j]>rank-1) return(0);};
+  if(graph[i*vert+j]<0 || graph[i*vert+j]>rank-1) return(0);};
  for(free=space; free<space+rank; free++) free->row=0; 
- for(i=0; i<vert; ++i) space[graph[i][i]].row+=(space[graph[i][i]].row)?0:1;
+ for(i=0; i<vert; ++i) space[graph[i*vert+i]].row+=(space[graph[i*vert+i]].row)?0:1;
  for(i=0; i<vert; ++i) for(j=i+1; j<vert; ++j) {
-  if(space[graph[i][j]].row==1) return(0); else space[graph[i][j]].row=2;
-  if(space[graph[j][i]].row==1) return(0); else space[graph[j][i]].row=2;};
+  if(space[graph[i*vert+j]].row==1) return(0); else space[graph[i*vert+j]].row=2;
+  if(space[graph[j*vert+i]].row==1) return(0); else space[graph[j*vert+i]].row=2;};
  for(free=space; free<space+rank; free++) if(free->row==0) return(0);
 
 free=&space[0];
-for (k=0; k<maxrank; k++) color[k]=NULL;
+for (k=0; k<vert*vert; k++) color[k]=NULL;
 for (i=0; i<vert; i++) for (j=0; j<vert; j++) {
   free->row=i; free->col=j;
-  if(color[graph[i][j]]==NULL) free->ptr=NULL;
-  else free->ptr=color[graph[i][j]];
-  color[graph[i][j]]=free++;}; return(1);
+  if(color[graph[i*vert+j]]==NULL) free->ptr=NULL;
+  else free->ptr=color[graph[i*vert+j]];
+  color[graph[i*vert+j]]=free++;}; return(1);
 }
 
 stabil (arank,vert,graph,color)
-int graph[maxvert][maxvert];
+int *graph;
 int vert,*arank;
-struct edge *color[maxrank];
+struct edge **color;
 {
 int k,p,i,j,rank,klass,c,s,t,truth,overfl,q,oldq;
 int newrank,oldnrank,oldp;
@@ -195,7 +203,7 @@ do {   /*  until new colors would not appear */
      {
      w=color[i];
      while(w!=NULL)
-       { graph[w->row][w->col]=i; w=w->ptr; }
+       { graph[w->row*vert+w->col]=i; w=w->ptr; }
      }
      rank=newrank;
    }                 /* next color */
@@ -206,13 +214,14 @@ while (1);
 }
 
 triangl(graph,i,j,newgamma,rank,vert)
-int graph[maxvert][maxvert];
+int *graph;
 int i,j;
 mlong *newgamma;
-{ static struct triple *lines[maxrank];
+{ 
 struct triple *w;
 int s,t,p,numval,q;
-struct triple cnst[maxvert],*freemem;
+struct triple *cnst,*freemem;
+cnst=malloc(vert*sizeof(struct triple));
 mlong *nnn; 
 numval=0;                /* the number of nonzero const */
 freemem=&cnst[0];
@@ -220,8 +229,8 @@ for (p=0;p<rank;p++)
     lines[p]=NULL;
 for (p=0; p<vert; p++)
     {
-     s=graph[i][p];
-     t=graph[p][j];
+     s=graph[i*vert+p];
+     t=graph[p*vert+j];
      pack (&lines[s],&freemem,t);
     }
 nnn=newgamma+5;
