@@ -23,10 +23,8 @@
 
 #include <stdlib.h>
 #include  <stdio.h>
-#define maxvert 2000
-#define maxrank maxvert*maxvert
-#define memlength 3*maxrank
-#define mlong int  /* to fix an MSDOS artefact */
+#define memlength (3*(vert*vert))
+
 FILE *f;
 struct triple
 {int col; int val; struct triple *ptr;};
@@ -35,6 +33,7 @@ struct edge
 
 static struct edge *space;
 static struct triple **lines;
+static int *memory;
 
 int find_value( int *values, int len, int v) {
     int i;
@@ -98,6 +97,7 @@ graph=malloc(vert*vert*sizeof(int));
 lines=malloc(vert*vert*sizeof(struct triple *));
 color=malloc(vert*vert*sizeof(struct edge *));
 space=malloc(vert*vert*sizeof(struct edge));
+memory=malloc(memlength*sizeof(int));
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
 antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
@@ -158,7 +158,6 @@ struct edge **color;
 int k,p,i,j,rank,klass,c,s,t,truth,overfl,q,oldq;
 int newrank,oldnrank,oldp;
 int *gamma;
-int memory[memlength];
 struct edge *free,*w,*o,*oo;
 gamma=&memory[0];
 rank=*arank;
@@ -216,13 +215,13 @@ while (1);
 triangl(graph,i,j,newgamma,rank,vert)
 int *graph;
 int i,j;
-mlong *newgamma;
+int *newgamma;
 { 
 struct triple *w;
 int s,t,p,numval,q;
 struct triple *cnst,*freemem;
 cnst=malloc(vert*sizeof(struct triple));
-mlong *nnn; 
+int *nnn; 
 numval=0;                /* the number of nonzero const */
 freemem=&cnst[0];
 for (p=0;p<rank;p++)
@@ -304,7 +303,7 @@ else
 }
 
 search(k,gamma,ap,ac,aklass,as,anewrank,atruth,aq,aoldq)
-mlong *gamma;
+int *gamma;
 int *ac,*ap,*aklass,*as,*anewrank,*atruth,k,*aq,*aoldq;
 {
 int q,oldp,oldq,nexte,dl,t,i;
