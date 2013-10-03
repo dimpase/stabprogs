@@ -33,6 +33,52 @@ struct triple
 struct edge
 { int row; int col; struct edge *ptr;};
 
+
+int find_value( int *values, int len, int v) {
+    int i;
+    i=0;
+    while(i<len) {
+        if(values[i]==v) break;
+        i++;
+    }
+    return i;
+}
+
+int standardize(int graph[maxvert][maxvert], int ord) {
+    int values[maxvert*maxvert];
+    int dvalues[maxvert];
+    int nv,nd;
+    int i,j,k;
+ 
+    nv=0;
+    nd=0;
+
+    for(i=0;i<ord;i++) {
+        k=find_value(dvalues,nd,graph[i][i]);
+        if(k==nd)dvalues[nd++]=graph[i][i];
+    }
+
+    for(i=0;i<ord;i++) for(j=0;j<ord;j++) {
+        if(i==j) {
+            k=find_value(dvalues,nd,graph[i][j]);
+            graph[i][j]=k;
+        } else {
+            k=find_value(values,nv,graph[i][j]);
+            if(k==nv)values[nv++]=graph[i][j];
+            graph[i][j]=k+nd;
+        }
+    }
+    return nv+nd;
+}
+
+int antisymmetrize(int graph[maxvert][maxvert], int ord) {
+    int i,j;
+    for(i=0;i<ord;i++) for(j=0;j<ord;j++) if(i!=j) {
+        graph[i][j]=graph[i][j]+65536*(graph[j][i]&0xffff);
+    }
+    return 0;
+}
+
 int main(int narg, char *arg[10])
 {
 struct edge *color[maxrank];
@@ -44,6 +90,8 @@ f=fopen(arg[1],"r");        /* char */
 if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
 fscanf (f,"%d%d",&rank,&vert);
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i][j]);
+antisymmetrize(graph, vert);
+rank=standardize(graph,vert);
 i=edgepack (graph,rank,vert,color); 
 if(i==0) {printf("please check your input!\n"); return;}
 printf ("\n\n number of colors: ");
@@ -59,11 +107,12 @@ for(i=0; i<vert; ++i) {
 printf ("\n\n number of cells: %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
 printf("\n\n adjacency matrix of the cellular algebra:\n\n");
- for(i=0; i<vert; ++i) { for(j=0; j<vert; ++j) { 
-  graph[i][j]=color[graph[i][j]]->row;
-  if(graph[i][j] <10) printf("  %d ",graph[i][j]);
-  else {if(graph[i][j] <100) printf(" %d ",graph[i][j]);
-  else printf("%d ",graph[i][j]);};} printf("\n");};
+ for(i=0; i<vert; ++i) { 
+     for(j=0; j<vert; ++j) { 
+       printf("%4d ",graph[i][j]);
+     };
+     printf("\n");
+ };
 /* printf("\n\n%ld msec \n\n",end_time); */
 }
 
