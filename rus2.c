@@ -34,6 +34,7 @@ struct edge
 static struct edge *space;
 static struct triple **lines;
 static int *memory;
+static struct triple *cnst;
 
 int find_value( int *values, int len, int v) {
     int i;
@@ -98,6 +99,7 @@ lines=malloc(vert*vert*sizeof(struct triple *));
 color=malloc(vert*vert*sizeof(struct edge *));
 space=malloc(vert*vert*sizeof(struct edge));
 memory=malloc(memlength*sizeof(int));
+cnst=malloc(vert*sizeof(struct triple));
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
 antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
@@ -219,8 +221,7 @@ int *newgamma;
 { 
 struct triple *w;
 int s,t,p,numval,q;
-struct triple *cnst,*freemem;
-cnst=malloc(vert*sizeof(struct triple));
+struct triple *freemem;
 int *nnn; 
 numval=0;                /* the number of nonzero const */
 freemem=&cnst[0];
