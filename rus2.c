@@ -79,10 +79,11 @@ int standardize(int *graph, int ord) {
 int antisymmetrize(int *graph, int ord) {
     int i,j;
     for(i=0;i<ord;i++) for(j=i+1;j<ord;j++) {
-        int t;
-        t=graph[i*ord+j];
-        graph[i*ord+j]=graph[i*ord+j]+65536*graph[j*ord+i];
-        graph[j*ord+i]=graph[j*ord+i]+65536*t;
+        int t, tp;
+        t = graph[i*ord+j];
+        tp= graph[j*ord+i];
+        graph[i*ord+j]+=65536*tp;
+        graph[j*ord+i]+=65536*t;
     }
     return 0;
 }
