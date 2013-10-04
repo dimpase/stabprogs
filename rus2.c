@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include  <stdio.h>
+#include <unistd.h>
 #define memlength (3*(vert*vert))
 
 FILE *f;
@@ -87,16 +88,48 @@ int antisymmetrize(int *graph, int ord) {
     return 0;
 }
 
-int main(int narg, char *arg[10])
+void help(char *name) {
+    printf("Usage: %s [-a] [-b] filename\n", name);
+    printf(" -a : Antisymmetrize\n");
+    printf(" -b : Don't antisymmetrize\n");
+}
+
+
+int main(int argc, char *argv[])
 {
 struct edge **color;
 int i,j,rank,vert;
 int *graph;
 long time; float t;
 long start_time,end_time;
-f=fopen(arg[1],"r");        /* char */
+int do_a=1;
+int c;
+
+while ((c = getopt (argc, argv, "ab")) != -1)
+    switch (c) {
+        case 'a':
+            do_a = 3;
+            break;
+        case 'b':
+            do_a = -3;
+            break;
+        case 'h':
+        case '?':
+            /* help */
+            help(argv[0]);
+            exit(0);
+    }
+if (optind==argc) {
+    help(argv[0]);
+    exit(0);
+}
+f=fopen(argv[optind],"r");        /* char */
 if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
 fscanf (f,"%d%d",&rank,&vert);
+if(rank<0) {
+    rank=-rank;
+    do_a-=2;
+}
 graph=malloc(vert*vert*sizeof(int));
 lines=malloc(vert*vert*sizeof(struct triple *));
 color=malloc(vert*vert*sizeof(struct edge *));
@@ -104,7 +137,7 @@ space=malloc(vert*vert*sizeof(struct edge));
 memory=malloc(memlength*sizeof(int));
 cnst=malloc(vert*sizeof(struct triple));
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
-antisymmetrize(graph, vert);
+if(do_a>0)antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
 i=edgepack (graph,rank,vert,color); 
 if(i==0) {printf("please check your input!\n"); return;}
