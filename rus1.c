@@ -23,28 +23,136 @@
 
 #include  <stdio.h>
 #include  <stdlib.h>
-#define maxvert 200
-#define maxrank maxvert*maxvert
-#define memlength maxrank*5
-#define mlong int  /* to fix an MSDOS artefact */
+#include <unistd.h>
+#define memlength (vert*vert*5)
+
 FILE *f;
 struct triple
 {int col; int val; struct triple *ptr;};
 struct edge
 { int row; int col; struct edge *ptr;};
 
-void main(int narg, char *arg[10])
+static struct edge *space;
+static struct triple **lines;
+static int *memory;
+static struct triple *cnst;
+
+int logten(int n) {
+    int i=0;
+    while (n>9) {
+        n=n/10;
+        i++;
+    }
+    return i;
+}
+
+int find_value( int *values, int len, int v) {
+    int i;
+    i=0;
+    while(i<len) {
+        if(values[i]==v) break;
+        i++;
+    }
+    return i;
+}
+
+int standardize(int *graph, int ord) {
+    int nv,nd;
+    int i,j,k;
+    int *values, *dvalues;
+
+    values=malloc(ord*ord*sizeof(int));
+    dvalues=malloc(ord*sizeof(int));
+    nv=0;
+    nd=0;
+
+    for(i=0;i<ord;i++) {
+        k=find_value(dvalues,nd,graph[i*ord+i]);
+        if(k==nd)dvalues[nd++]=graph[i*ord+i];
+    }
+
+    for(i=0;i<ord;i++) for(j=0;j<ord;j++) {
+        if(i==j) {
+            k=find_value(dvalues,nd,graph[i*ord+j]);
+            graph[i*ord+j]=k;
+        } else {
+            k=find_value(values,nv,graph[i*ord+j]);
+            if(k==nv)values[nv++]=graph[i*ord+j];
+            graph[i*ord+j]=k+nd;
+        }
+    }
+    free(dvalues);
+    free(values);
+    return nv+nd;
+}
+
+int antisymmetrize(int *graph, int ord) {
+    int i,j;
+    for(i=0;i<ord;i++) for(j=i+1;j<ord;j++) {
+        int t, tp;
+        t=graph[i*ord+j];
+        tp= graph[j*ord+i];
+        graph[i*ord+j]+=65536*tp;
+        graph[j*ord+i]+=65536*t;
+    }
+    return 0;
+}
+
+void help(char *name) {
+    printf("Usage: %s [-a] [-b] filename\n", name);
+    printf(" -a : Antisymmetrize\n");
+    printf(" -b : Don't antisymmetrize\n");
+}
+
+int main(int argc, char *argv[])
 {
-struct edge *color[maxrank];
+struct edge **color;
 int i,j,rank,vert;
-int graph[maxvert][maxvert];
+int *graph;
 long time; float t;
 long start_time,end_time;
-f=fopen(arg[1],"r");        /* char */
+int do_a=1;
+int c;
+char formatstring[10];
+
+while ((c = getopt (argc, argv, "ab")) != -1)
+    switch (c) {
+        case 'a':
+            do_a = 3;
+            break;
+        case 'b':
+            do_a = -3;
+            break;
+        case 'h':
+        case '?':
+            /* help */
+            help(argv[0]);
+            exit(0);
+    }
+if (optind==argc) {
+    help(argv[0]);
+    exit(0);
+}
+
+f=fopen(argv[optind],"r");        /* char */
 if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
 fscanf (f,"%d%d",&rank,&vert);
-for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i][j]);
-i=edgepack (graph,rank,vert,color); if(i==0) return;
+if(rank<0) {
+        rank=-rank;
+            do_a-=2;
+}
+graph=malloc(vert*vert*sizeof(int));
+lines=malloc(vert*vert*sizeof(struct triple *));
+color=malloc(vert*vert*sizeof(struct edge *));
+space=malloc(vert*vert*sizeof(struct edge));
+memory=malloc(memlength*sizeof(int));
+cnst=malloc(vert*sizeof(struct triple));
+for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
+
+if(do_a>0)antisymmetrize(graph, vert);
+rank=standardize(graph,vert);
+
+i=edgepack (graph,rank,vert,color); if(i==0) return 1;
 
 start_time=clock()/1000;
 printf ("\n\n number of colors: ");
@@ -52,67 +160,67 @@ stabil (&rank,vert,graph,color);
 end_time=clock()/1000-start_time;
 for(i=0; i<rank; i++) color[i]->row=-1; j=0;
 for(i=0; i<vert; ++i) {
- if(color[graph[i][i]]->row<0) color[graph[i][i]]->row=j++;};
+ if(color[graph[i*vert+i]]->row<0) color[graph[i*vert+i]]->row=j++;};
 printf ("\n\n number of cells:  %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
 printf("\n\n adjacency matrix of the cellular algebra:\n\n");
- for(i=0; i<vert; ++i) { for(j=0; j<vert; ++j) { 
-  graph[i][j]=color[graph[i][j]]->row;
-  if(graph[i][j] <10) printf("  %d ",graph[i][j]);
-  else {if(graph[i][j] <100) printf(" %d ",graph[i][j]);
-  else printf("%d ",graph[i][j]);};} printf("\n");};
+ sprintf(formatstring,"%%%id ",logten(rank-1)+1);
+ for(i=0; i<vert; ++i) { 
+     for(j=0; j<vert; ++j) { 
+       printf(formatstring,graph[i*vert+j]);
+     };
+     printf("\n");
+ };
 /* printf("\n\n%ld msec \n\n",end_time);*/
 }
 
 int edgepack (graph,rank,vert,color)
-int graph[maxvert][maxvert];
+int *graph;
 int vert,rank;
-struct edge *color[maxrank];
+struct edge **color;
 {
 int k,i,j;
-static struct edge space[maxrank];
 struct edge *free;
 
  for(i=0; i<vert; ++i) for(j=0; j<vert; ++j) {
-  if(graph[i][j]<0 || graph[i][j]>rank-1) 
+  if(graph[i*vert+j]<0 || graph[i*vert+j]>rank-1) 
    { printf("please check your input!\n"); vert=0; return(0);};};
  for(free=space; free<space+rank; free++) free->row=0; 
- for(i=0; i<vert; ++i) space[graph[i][i]].row+=(space[graph[i][i]].row)?0:1;
+ for(i=0; i<vert; ++i) space[graph[i*vert+i]].row+=(space[graph[i*vert+i]].row)?0:1;
  for(i=0; i<vert; ++i) for(j=i+1; j<vert; ++j) {
-  if(space[graph[i][j]].row==1) {printf("please check your input!\n");
-   vert=0; return(0);} else space[graph[i][j]].row=2;
-  if(space[graph[j][i]].row==1) {printf("please check your input!\n");
-   vert=0; return(0);} else space[graph[j][i]].row=2;};
+  if(space[graph[i*vert+j]].row==1) {printf("please check your input!\n");
+   vert=0; return(0);} else space[graph[i*vert+j]].row=2;
+  if(space[graph[j*vert+i]].row==1) {printf("please check your input!\n");
+   vert=0; return(0);} else space[graph[j*vert+i]].row=2;};
  for(free=space; free<space+rank; free++) {
   if(free->row==0) {printf("please check your input!\n");vert=0;return(0);};};
 
 free=&space[0];
-for (k=0; k<maxrank; k++)
+for (k=0; k<vert*vert; k++)
     color[k]=NULL;
 for (i=0; i<vert; i++)
    for (j=0; j<vert; j++)
        {
         free->row=i;
         free->col=j;
-        if (color[graph[i][j]]==NULL)
+        if (color[graph[i*vert+j]]==NULL)
             free->ptr=NULL;
-	else  free->ptr=color[graph[i][j]];
-        color[graph[i][j]]=free;
+	else  free->ptr=color[graph[i*vert+j]];
+        color[graph[i*vert+j]]=free;
         free++;
        }
 return(1);
 }
 
 stabil (arank,vert,graph,color)
-int graph[maxvert][maxvert];
+int *graph;
 int vert,*arank;
-struct edge *color[maxrank];
+struct edge **color;
 {
 int k,p,i,j,rank,klass,c,s,t,truth,overfl;
 /* int actcol[maxrank];  */
 int newrank,oldnrank,oldp;
 int *gamma;
-int memory[memlength];
 struct edge *free,*w,*o,*oo;
 gamma=&memory[0];
 rank=*arank;
@@ -170,7 +278,7 @@ do    /*  until new colors would not appear */
      {
      w=color[i];
      while(w!=NULL)
-       { graph[w->row][w->col]=i; w=w->ptr; }
+       { graph[w->row*vert+w->col]=i; w=w->ptr; }
      }
      rank=newrank;
    }                 /* next color */
@@ -186,22 +294,22 @@ while (1);
 
 triangl(graph,i,j,newgamma,rank,vert /*,actcol */)
 /* int actcol[maxrank];  */
-int graph[maxvert][maxvert];
+int *graph;
 int i,j;
-mlong *newgamma;
-{ static struct triple *lines[maxrank];
+int *newgamma;
+{
 struct triple *w;
 int s,t,p,numval,q;
- struct triple cnst[maxvert],*freemem;
-mlong *nnn; 
+ struct triple *freemem;
+int *nnn; 
 numval=0;                /* the number of nonzero const */
 freemem=&cnst[0];
 for (p=0;p<rank;p++)
     lines[p]=NULL;
 for (p=0; p<vert; p++)
     {
-     s=graph[i][p];
-     t=graph[p][j];
+     s=graph[i*vert+p];
+     t=graph[p*vert+j];
   /*   if (actcol[s]%2==0 && actcol[t]%2==0)  continue;  */
      pack (&lines[s],&freemem,t);
     }
@@ -276,7 +384,7 @@ else
 }
 
 search(k,gamma,ap,ac,aklass,as,anewrank,atruth)
-mlong *gamma;
+int *gamma;
 int *ac,*ap,*aklass,*as,*anewrank,*atruth,k;
 {
 int q,oldp,oldq,nexte,dl,t,i;
