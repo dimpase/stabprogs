@@ -151,7 +151,7 @@ for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
 if(do_a>0)antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
 i=edgepack (graph,rank,vert,color); 
-if(i==0) {printf("please check your input!\n"); return;}
+if(i==0) {printf("please check your input!\n"); return 1;}
 printf ("\n\n number of colors: ");
 
 start_time=clock()/1000;
@@ -173,6 +173,7 @@ printf("\n\n adjacency matrix of the cellular algebra:\n\n");
      printf("\n");
  };
 /* printf("\n\n%ld msec \n\n",end_time); */
+return 0;
 }
 
 int edgepack (graph,rank,vert,color) 
