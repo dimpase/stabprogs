@@ -37,6 +37,15 @@ static struct triple **lines;
 static int *memory;
 static struct triple *cnst;
 
+int logten(int n) {
+    int i=0;
+    while (n>9) {
+        n=n/10;
+        i++;
+    }
+    return i;
+}
+
 int find_value( int *values, int len, int v) {
     int i;
     i=0;
@@ -104,6 +113,7 @@ long time; float t;
 long start_time,end_time;
 int do_a=1;
 int c;
+char formatstring[10];
 
 while ((c = getopt (argc, argv, "ab")) != -1)
     switch (c) {
@@ -154,9 +164,10 @@ for(i=0; i<vert; ++i) {
 printf ("\n\n number of cells: %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
 printf("\n\n adjacency matrix of the cellular algebra:\n\n");
+ sprintf(formatstring,"%%%id ",logten(rank-1)+1);
  for(i=0; i<vert; ++i) { 
      for(j=0; j<vert; ++j) { 
-       printf("%4d ",graph[i*vert+j]);
+       printf(formatstring, graph[i*vert+j]);
      };
      printf("\n");
  };
