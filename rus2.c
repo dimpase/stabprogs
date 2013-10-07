@@ -32,6 +32,8 @@ struct triple
 struct edge
 { int row; int col; struct edge *ptr;};
 
+static int gap_output=0;
+
 static struct edge *space;
 static struct triple **lines;
 static int *memory;
@@ -99,9 +101,10 @@ int antisymmetrize(int *graph, int ord) {
 }
 
 void help(char *name) {
-    printf("Usage: %s [-a] [-b] filename\n", name);
+    printf("Usage: %s [-a] [-b] [-g] filename\n", name);
     printf(" -a : Antisymmetrize\n");
     printf(" -b : Don't antisymmetrize\n");
+    printf(" -g : GAP format output\n");
 }
 
 
@@ -116,13 +119,16 @@ int do_a=1;
 int c;
 char formatstring[10];
 
-while ((c = getopt (argc, argv, "ab")) != -1)
+while ((c = getopt (argc, argv, "abg")) != -1)
     switch (c) {
         case 'a':
             do_a = 3;
             break;
         case 'b':
             do_a = -3;
+            break;
+        case 'g':
+            gap_output=1;
             break;
         case 'h':
         case '?':
@@ -147,31 +153,41 @@ color=malloc(vert*vert*sizeof(struct edge *));
 space=malloc(vert*vert*sizeof(struct edge));
 memory=malloc(memlength*sizeof(int));
 cnst=malloc(vert*sizeof(struct triple));
+if(!(graph && lines && color && space && memory && cnst)) {
+    fprintf(stderr, "Memory allocation error.\n");
+    exit(2);
+}
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i*vert+j]);
 if(do_a>0)antisymmetrize(graph, vert);
 rank=standardize(graph,vert);
 i=edgepack (graph,rank,vert,color); 
-if(i==0) {printf("please check your input!\n"); return 1;}
-printf ("\n\n number of colors: ");
+if(i==0) {fprintf(stderr, "please check your input!\n"); return 1;}
+if(!gap_output)printf ("\n\n number of colors: ");
 
 start_time=clock()/1000;
 stabil (&rank,vert,graph,color);
 end_time=clock()/1000-start_time;
 
-printf("\b\b\b\b\b\b%6d",rank);
+if(!gap_output)printf("\b\b\b\b\b\b%6d",rank);
 for(i=0; i<rank; i++) color[i]->row=-1; j=0;
 for(i=0; i<vert; ++i) {
  if(color[graph[i*vert+i]]->row<0) color[graph[i*vert+i]]->row=j++;};
-printf ("\n\n number of cells: %6d", j);
+if(!gap_output)printf ("\n\n number of cells: %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
-printf("\n\n adjacency matrix of the cellular algebra:\n\n");
- sprintf(formatstring,"%%%id ",logten(rank-1)+1);
+if(!gap_output)printf("\n\n adjacency matrix of the cellular algebra:\n\n");
+ if(gap_output)
+    sprintf(formatstring,"%%d, ");
+    else sprintf(formatstring,"%%%id ",logten(rank-1)+1);
+ if(gap_output)printf("[");
  for(i=0; i<vert; ++i) { 
+     if(gap_output)printf("[");
      for(j=0; j<vert; ++j) { 
        printf(formatstring, graph[i*vert+j]);
      };
+     if(gap_output)printf("],");
      printf("\n");
  };
+ if(gap_output)printf("]\n");
 /* printf("\n\n%ld msec \n\n",end_time); */
 return 0;
 }
@@ -212,7 +228,7 @@ int *gamma;
 struct edge *free,*w,*o,*oo;
 gamma=&memory[0];
 rank=*arank;
-printf("%6d",rank); fflush(stdout);
+if(!gap_output) {printf("%6d",rank); fflush(stdout); };
 do {   /*  until new colors would not appear */
   truth=0;                 /* new colors were not appear */
   newrank=rank;
@@ -236,7 +252,7 @@ do {   /*  until new colors would not appear */
            if(q==-1) *(gamma+oldq+4)=-1; else{ if(oldq!=-1){
            if(*(gamma+p+3)!=-1) *(gamma+*(gamma+p+3)+2)=*(gamma+p+2);
            if(*(gamma+p+2)!=-1) *(gamma+*(gamma+p+2)+3)=*(gamma+p+3);};};}
-       if (oldnrank!=newrank) {
+       if (!gap_output && (oldnrank!=newrank)) {
           printf("\b\b\b\b\b\b%6d",newrank); fflush(stdout);}
        if (c!=k)
         {
