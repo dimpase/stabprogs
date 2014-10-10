@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define vm 150
+#define vm 300
 #define vm2 vm*vm
 #define vm3 vm*vm2
 

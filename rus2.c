@@ -23,16 +23,22 @@
 
 #include <stdlib.h>
 #include  <stdio.h>
-#define maxvert 200
-#define maxrank maxvert*maxvert
-#define memlength 3*maxrank
 #define mlong int  /* to fix an MSDOS artefact */
-FILE *f;
 struct triple
 {int col; int val; struct triple *ptr;};
 struct edge
 { int row; int col; struct edge *ptr;};
 
+void prmat(int vert, int graph[][vert]) {
+int i, j;
+printf("\n\n adjacency matrix of the cellular algebra:\n\n");
+ for(i=0; i<vert; ++i) {
+     for(j=0; j<vert; ++j) {
+       printf("%5d ",graph[i][j]);
+     };
+     printf("\n");
+ };
+}
 
 int find_value( int *values, int len, int v) {
     int i;
@@ -44,9 +50,9 @@ int find_value( int *values, int len, int v) {
     return i;
 }
 
-int standardize(int graph[maxvert][maxvert], int ord) {
-    int values[maxvert*maxvert];
-    int dvalues[maxvert];
+int standardize(int ord, int graph[][ord]) {
+    int values[ord*ord];
+    int dvalues[ord];
     int nv,nd;
     int i,j,k;
  
@@ -71,7 +77,7 @@ int standardize(int graph[maxvert][maxvert], int ord) {
     return nv+nd;
 }
 
-int antisymmetrize(int graph[maxvert][maxvert], int ord) {
+int antisymmetrize(int ord, int graph[][ord]) {
     int i,j;
     for(i=0;i<ord;i++) for(j=0;j<ord;j++) if(i!=j) {
         graph[i][j]=graph[i][j]+65536*(graph[j][i]&0xffff);
@@ -79,20 +85,22 @@ int antisymmetrize(int graph[maxvert][maxvert], int ord) {
     return 0;
 }
 
-int main(int narg, char *arg[10])
+int real_main(int vert, FILE *f)
 {
-struct edge *color[maxrank];
-int i,j,rank,vert;
-int graph[maxvert][maxvert];
+int graph[vert][vert];
+int rank, v;
+struct edge *color[vert*vert];
+struct edge space[vert*vert];
+int i,j;
 long time; float t;
 long start_time,end_time;
-f=fopen(arg[1],"r");        /* char */
-if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
-fscanf (f,"%d%d",&rank,&vert);
-for (i=0;i<vert;i++) for(j=0;j<vert;j++) fscanf (f, "%d", &graph[i][j]);
-antisymmetrize(graph, vert);
-rank=standardize(graph,vert);
-i=edgepack (graph,rank,vert,color); 
+for (i=0;i<vert;i++) for(j=0;j<vert;j++) {
+   fscanf (f, "%d", &v);
+   graph[i][j] = v;
+}
+antisymmetrize(vert, graph);
+rank=standardize(vert, graph);
+i=edgepack (vert,graph,rank,color, space);
 if(i==0) {printf("please check your input!\n"); return;}
 printf ("\n\n number of colors: ");
 
@@ -101,27 +109,19 @@ stabil (&rank,vert,graph,color);
 end_time=clock()/1000-start_time;
 
 printf("\b\b\b\b\b\b%6d",rank);
-for(i=0; i<rank; i++) color[i]->row=-1; j=0;
+for(i=0; i<rank; i++) color[i]->row=-1;
+j=0;
 for(i=0; i<vert; ++i) {
  if(color[graph[i][i]]->row<0) color[graph[i][i]]->row=j++;};
 printf ("\n\n number of cells: %6d", j);
 for(i=0; i<rank; ++i) if(color[i]->row<0) color[i]->row=j++;
-printf("\n\n adjacency matrix of the cellular algebra:\n\n");
- for(i=0; i<vert; ++i) { 
-     for(j=0; j<vert; ++j) { 
-       printf("%4d ",graph[i][j]);
-     };
-     printf("\n");
- };
 /* printf("\n\n%ld msec \n\n",end_time); */
+prmat(vert, graph);
 }
 
-int edgepack (graph,rank,vert,color) 
-int graph[maxvert][maxvert], vert, rank;
-struct edge *color[maxrank];
+int edgepack (int vert, int graph[][vert], int rank, struct edge *color[], struct edge space[vert*vert])
 {
 int k,i,j;
-static struct edge space[maxrank];
 struct edge *free;
 
  for(i=0; i<vert; ++i) for(j=0; j<vert; ++j) {
@@ -134,7 +134,7 @@ struct edge *free;
  for(free=space; free<space+rank; free++) if(free->row==0) return(0);
 
 free=&space[0];
-for (k=0; k<maxrank; k++) color[k]=NULL;
+for (k=0; k<vert*vert; k++) color[k]=NULL;
 for (i=0; i<vert; i++) for (j=0; j<vert; j++) {
   free->row=i; free->col=j;
   if(color[graph[i][j]]==NULL) free->ptr=NULL;
@@ -142,15 +142,12 @@ for (i=0; i<vert; i++) for (j=0; j<vert; j++) {
   color[graph[i][j]]=free++;}; return(1);
 }
 
-stabil (arank,vert,graph,color)
-int graph[maxvert][maxvert];
-int vert,*arank;
-struct edge *color[maxrank];
+stabil (int *arank, int vert, int graph[][vert], struct edge *color[])
 {
 int k,p,i,j,rank,klass,c,s,t,truth,overfl,q,oldq;
 int newrank,oldnrank,oldp;
 int *gamma;
-int memory[memlength];
+int memory[3*vert*vert];
 struct edge *free,*w,*o,*oo;
 gamma=&memory[0];
 rank=*arank;
@@ -169,11 +166,11 @@ do {   /*  until new colors would not appear */
 
     do
     {
-     triangl(graph,w->row,w->col,gamma+p,rank,vert);
+     triangl(vert, graph,w->row,w->col,gamma+p,rank);
        oldnrank=newrank;
        oldp=p;
        search(k,gamma,&p,&c,&klass,&s,&newrank,&truth,&q,&oldq);
-       if (p>=(memlength-(vert*3+5)) || overfl==1)
+       if (p>=(3*vert*vert-(vert*3+5)) || overfl==1)
 	  { p=oldp; newrank=oldnrank; overfl=1;
            if(q==-1) *(gamma+oldq+4)=-1; else{ if(oldq!=-1){
            if(*(gamma+p+3)!=-1) *(gamma+*(gamma+p+3)+2)=*(gamma+p+2);
@@ -205,14 +202,12 @@ do {   /*  until new colors would not appear */
 while (1);
 }
 
-triangl(graph,i,j,newgamma,rank,vert)
-int graph[maxvert][maxvert];
-int i,j;
-mlong *newgamma;
-{ static struct triple *lines[maxrank];
+triangl(int vert, int graph[][vert], int i, int j, mlong *newgamma, int rank)
+{
+struct triple *lines[vert*vert];
 struct triple *w;
 int s,t,p,numval,q;
-struct triple cnst[maxvert],*freemem;
+struct triple cnst[vert],*freemem;
 mlong *nnn; 
 numval=0;                /* the number of nonzero const */
 freemem=&cnst[0];
@@ -420,3 +415,12 @@ IR1:*ac=c;
 }
 
 
+int main(int narg, char *arg[10])
+{
+FILE *f;
+int rank,vert;
+f=fopen(arg[1],"r");        /* char */
+if (f == NULL) { printf("\n file does not exist\n"); exit(0);}
+fscanf (f,"%d%d",&rank,&vert);
+return real_main(vert, f);
+}

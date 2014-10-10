@@ -23,7 +23,7 @@
 
 #include  <stdio.h>
 #include  <stdlib.h>
-#define maxvert 200
+#define maxvert 300
 #define maxrank maxvert*maxvert
 #define memlength maxrank*5
 #define mlong int  /* to fix an MSDOS artefact */
