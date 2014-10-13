@@ -152,7 +152,7 @@ do {   /*  until new colors would not appear */
 
     do
     {
-     triangl(vert, graph,w->row,w->col,gamma+p,rank);
+       triangl(vert, graph,w->row,w->col,gamma+p,rank);
        oldnrank=newrank;
        oldp=p;
        search(k,gamma,&p,&c,&klass,&s,&newrank,&truth,&q,&oldq);
@@ -180,7 +180,7 @@ do {   /*  until new colors would not appear */
      while(w!=NULL)
        { graph[w->row][w->col]=i; w=w->ptr; }
      }
-     rank=newrank;
+    rank=newrank;
    }                 /* next color */
    if (truth==0) break;
    *arank=rank;
@@ -275,9 +275,8 @@ else
    }
 }
 
-search(k,gamma,ap,ac,aklass,as,anewrank,atruth,aq,aoldq)
-mlong *gamma;
-int *ac,*ap,*aklass,*as,*anewrank,*atruth,k,*aq,*aoldq;
+search(int k, mlong *gamma, int *ap, int *ac, int *aklass, int *as,
+	int *anewrank, int *atruth, int *aq, int *aoldq)
 {
 int q,oldp,oldq,nexte,dl,t,i;
 int c,p,klass,newrank,truth;
