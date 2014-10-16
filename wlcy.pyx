@@ -1,6 +1,6 @@
 cdef extern from "wl.h":
+   ctypedef  int* vlamatrix
    int wl(int, int *, int *)
-#   int wl(int, int *, int (*)[])
 
 from libc.stdlib cimport *
 
@@ -12,8 +12,8 @@ def wlcy(a):
    for i in range(n):
        for j in range(n):
            graph[n*i+j] = a[i,j]
-   rank = wl(n, &ncells, graph)
-#   rank = wl(n, &ncells, (int (*)[])graph)
+  # rank = wl(n, &ncells, graph)
+   rank = wl(n, &ncells, <vlamatrix>graph)
    if rank < 0:
       print "please check your input!\n"
       free(graph)
