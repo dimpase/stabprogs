@@ -27,25 +27,30 @@
 
 int real_main(int vert, FILE *f)
 {
-int graph[vert][vert];
+//int graph[vert][vert];
+int *graph;
 int rank, v;
 int i,j, ncells;
 long time; float t;
 long start_time,end_time;
+graph = (int *)malloc(vert*vert*(sizeof(int)));
 for (i=0;i<vert;i++) for(j=0;j<vert;j++) {
    fscanf (f, "%d", &v);
-   graph[i][j] = v; }
+//   graph[i][j] = v; }
+   graph[vert*i+j] = v; }
 start_time=clock()/1000;
-rank = wl(vert, &ncells, graph);
+rank = wl(vert, &ncells, (int (*)[])graph);
 end_time=clock()/1000-start_time;
 if (rank<0) {
    printf("please check your input!\n"); 
+   free(graph);
 return;
 }
 printf ("\n\n number of colors: %6d",rank);
 printf ("\n\n number of cells: %6d", ncells);
 /* printf("\n\n%ld msec \n\n",end_time); */
-prmat(vert, graph);
+prmat(vert, (int (*)[])graph);
+free(graph);
 }
 
 int main(int narg, char *arg[10])
