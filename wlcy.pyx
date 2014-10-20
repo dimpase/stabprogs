@@ -4,7 +4,7 @@ cdef extern from "wl.h":
 
 from libc.stdlib cimport *
 
-def wlcy(a):
+cpdef wlcy(a, colmatrix=True):
    cdef int n = a.nrows()
    cdef int *graph
    cdef int i,j, ncells
@@ -17,6 +17,11 @@ def wlcy(a):
       print "please check your input!\n"
       free(graph)
       return -1, 0
-   free(graph)
+   if colmatrix:
+      b = [[graph[n*i +j] for j in range(n)] for i in range(n)]
    nc = ncells
-   return rank, nc
+   free(graph)
+   if colmatrix:
+      return rank, nc, b
+   else: 
+      return rank, nc
